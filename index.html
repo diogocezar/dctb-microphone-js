@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Microphone Capture</title>
+	<link rel="stylesheet" href="">
+</head>
+<body>
+	<button type="button" id="action">Start</button>
+	<div class="container"></div>
+	<div class="code"></div>
+	<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+	<script>
+		const Microphone = {
+			mediaRecorder : null,
+			chunks        : [],
+			blob          : null,
+			reader        : null,
+			audio         : null,
+			init: () => {
+				navigator
+					.mediaDevices
+					.getUserMedia({ audio: true })
+					.then( stream => {
+						Microphone.mediaRecorder = new MediaRecorder(stream);
+						Microphone.mediaRecorder.ondataavailable = data => {
+							console.log(data.data);
+							Microphone.chunks.push(data.data);
+						};
+						Microphone.mediaRecorder.onstop = () => {
+							Microphone.stop();
+						}
+					}, err => {
+						$('body').append('<p>Você deve permitir o áudio!</p>');
+					});
+				Microphone.setButton();
+			},
+			setButton: () => {
+				$('#action').on('click', function() {
+					if($(this).text() === 'Start'){
+						Microphone.mediaRecorder.start();
+						$(this).text('Stop');
+					}
+					else{
+						Microphone.mediaRecorder.stop();
+						$(this).text('Start');
+					}
+				});
+			},
+			stop: () => {
+				console.log(Microphone.chunks);
+				Microphone.blob   = new Blob(Microphone.chunks, { type: 'audio/ogg; code=opus'});
+				Microphone.reader = new window.FileReader();
+				Microphone.reader.readAsDataURL(Microphone.blob);
+				Microphone.reader.onloadend = () => {
+					Microphone.createAudio(Microphone.reader.result);
+					Microphone.printBase64(Microphone.reader.result);
+				}
+			},
+			createAudio: (result) => {
+				Microphone.audio = document.createElement('audio');
+				Microphone.audio.src = result;
+				Microphone.audio.controls = true;
+				$('.container').empty().append(Microphone.audio);
+			},
+			printBase64: (result) => {
+				$('.code').append(result);
+			}
+		};
+		$(document).ready(function(){
+			Microphone.init();
+		});
+	</script>
+</body>
+</html>
